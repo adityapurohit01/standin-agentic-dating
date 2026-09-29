@@ -6,8 +6,8 @@ dist/
 .env
 .env*.local
 *.local
-data/app.db*
-data/media/
+data/app.db-wal
+data/app.db-shm
 *.log
 docs/screens/*.tmp
 .tempmediaStorage/
