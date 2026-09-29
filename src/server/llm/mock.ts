@@ -40,14 +40,55 @@ export class MockLLM implements LLMInterface {
 
     let reply = "That sounds fascinating. I really value thoughtfulness and balance in how we spend our time.";
     if (options.purpose.includes("agent") || options.purpose.includes("date")) {
-      if (lastMsg.includes("opening") || options.messages.length <= 2) {
-        reply = "Hey! It's so nice to meet you. I was just thinking how great this spot is. What caught your eye about it?";
-      } else if (lastMsg.includes("probe") || options.messages.length <= 4) {
-        reply = "For me, personal growth and having space for creative projects is huge. How do you balance career ambition with staying grounded?";
-      } else if (lastMsg.includes("friction") || options.messages.length <= 6) {
-        reply = "Honestly, I value deep communication over quick assumptions. If things get stressful, I prefer talking it through directly rather than avoiding it.";
+      const sys = options.system || "";
+      const nameMatch = sys.match(/stand-in for (.*?), on a date with (.*?)\./);
+      const speakerName = nameMatch ? nameMatch[1].trim() : (options.personId || "Candidate");
+      const partnerName = nameMatch ? nameMatch[2].trim() : "there";
+
+      const needsMatch = sys.match(/Core Needs:\s*(.*?)(?:\n|$)/);
+      const rawNeeds = needsMatch
+        ? needsMatch[1].split(",").map((s) => s.replace(/\s*\(Weight:.*?\)/, "").trim()).filter(Boolean)
+        : [];
+      const interestsMatch = sys.match(/Hobbies & Interests:\s*(.*?)(?:\n|$)/);
+      const rawInterests = interestsMatch
+        ? interestsMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+      const valuesMatch = sys.match(/Values:\s*(.*?)(?:\n|$)/);
+      const rawValues = valuesMatch
+        ? valuesMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      const topNeed = rawNeeds[0] || "genuine mutual curiosity";
+      const secondNeed = rawNeeds[1] || "shared integrity and purpose";
+      const favInterest = rawInterests[0] || "exploring deep ideas";
+      const coreValue = rawValues[0] || "intellectual curiosity";
+
+      const frictionMatch =
+        lastMsg.match(/friction topic(?: is)?:?\s*"([^"]+)"/i) ||
+        lastMsg.match(/friction area:?\s*"([^"]+)"/i);
+      const frictionTopic = frictionMatch ? frictionMatch[1] : "demanding schedules versus spontaneous shared downtime";
+
+      const isRound2 = options.purpose.includes("round2");
+      const turnNum = options.messages.length;
+
+      let hash = 0;
+      for (let i = 0; i < speakerName.length; i++) {
+        hash = (hash * 31 + speakerName.charCodeAt(i)) & 0xffffffff;
+      }
+      const prefersDirect = Math.abs(hash) % 2 === 0;
+
+      if (turnNum <= 2) {
+        reply = `It's so wonderful to meet you, ${partnerName}. I was really drawn to this setting—it gives us space to have an authentic conversation. When you have free time away from work, what kind of activities or passions like ${favInterest} truly energize you?`;
+      } else if (turnNum <= 4) {
+        reply = `I really appreciate that, ${partnerName}. A core priority for me is ${topNeed}. Whether I'm focusing on ${favInterest} or investing in personal growth, having honest alignment on ${coreValue} matters immensely. How do you approach that in your own life?`;
+      } else if (turnNum <= (isRound2 ? 10 : 6)) {
+        if (prefersDirect) {
+          reply = `That brings up an important point around ${frictionTopic}. Staying true to ${coreValue}, I value open communication and direct clarity over letting unaddressed concerns build up. If our priorities diverge, how would you prefer we resolve that?`;
+        } else {
+          reply = `When navigating ${frictionTopic}, I look for thoughtful empathy and patience. We don't have to agree on every single routine, but ensuring mutual support for ${secondNeed} is something that creates lasting trust.`;
+        }
       } else {
-        reply = "I've really enjoyed hearing your perspective. It feels like we share quite a bit of common ground on what matters.";
+        reply = `Hearing your thoughts gives me a much deeper appreciation for who you are, ${partnerName}. I've genuinely loved our conversation—it's inspiring to connect with someone who cares about ${topNeed} and brings such authentic presence.`;
       }
     } else if (options.purpose.includes("chat")) {
       reply = "Hey there! Thanks for reaching out. Based on my notes, I'm always open to discussing new ideas, tech, or our favorite weekend travel spots.";

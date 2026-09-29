@@ -13,6 +13,7 @@ import { executeDate } from "../dating/run-date";
 import { calculateAllRankings } from "../ranking/rank";
 import { emitEvent } from "../events";
 import crypto from "crypto";
+import pLimit from "p-limit";
 
 export async function handleCollect(personId: string): Promise<void> {
   const sqlite = getSqlite();
@@ -155,29 +156,33 @@ export async function handleRound1Dates(): Promise<void> {
 
   // Execute all pending Round 1 dates
   const pendingDates = sqlite.prepare("SELECT id FROM dates WHERE round = 1 AND status = 'pending'").all() as { id: string }[];
-  for (const d of pendingDates) {
-    await executeDate(d.id);
-  }
+  const limit = pLimit(Number(process.env.CONCURRENCY || 8));
+  await Promise.all(pendingDates.map((d) => limit(() => executeDate(d.id))));
 }
 
 export async function handleReflection(): Promise<void> {
   const sqlite = getSqlite();
   const people = sqlite.prepare("SELECT id FROM people WHERE status = 'ready'").all() as { id: string }[];
+  const limit = pLimit(Number(process.env.CONCURRENCY || 8));
 
-  for (const person of people) {
-    const personaRow = sqlite.prepare("SELECT persona_json FROM personas WHERE person_id = ?").get(person.id) as any;
-    if (!personaRow) continue;
-    const persona = JSON.parse(personaRow.persona_json);
+  await Promise.all(
+    people.map((person) =>
+      limit(async () => {
+        const personaRow = sqlite.prepare("SELECT persona_json FROM personas WHERE person_id = ?").get(person.id) as any;
+        if (!personaRow) return;
+        const persona = JSON.parse(personaRow.persona_json);
 
-    // Get side reviews for this person from Round 1
-    const reviewRows = sqlite.prepare(`
-      SELECT review_json FROM date_reviews
-      WHERE reviewer_id = ? AND review_type = 'side'
-    `).all(person.id) as any[];
+        // Get side reviews for this person from Round 1
+        const reviewRows = sqlite.prepare(`
+          SELECT review_json FROM date_reviews
+          WHERE reviewer_id = ? AND review_type = 'side'
+        `).all(person.id) as any[];
 
-    const reviews = reviewRows.map((r) => JSON.parse(r.review_json));
-    await runReflection(person.id, persona, reviews);
-  }
+        const reviews = reviewRows.map((r) => JSON.parse(r.review_json));
+        await runReflection(person.id, persona, reviews);
+      })
+    )
+  );
 }
 
 export async function handleRound2Dates(): Promise<void> {
@@ -213,21 +218,26 @@ export async function handleRound2Dates(): Promise<void> {
     }
   }
 
-  // Create and execute Round 2 dates
-  for (const pairKey of round2Pairs) {
-    const [aId, bId] = pairKey.split(":::");
-    let dateRow = sqlite.prepare("SELECT id, status FROM dates WHERE a_id = ? AND b_id = ? AND round = 2").get(aId, bId) as any;
-    if (!dateRow) {
-      const id = crypto.randomUUID();
-      sqlite.prepare(`
-        INSERT INTO dates (id, a_id, b_id, round, status)
-        VALUES (?, ?, ?, 2, 'pending')
-      `).run(id, aId, bId);
-      dateRow = { id, status: "pending" };
-    }
+  // Create and execute Round 2 dates with concurrency limit
+  const limit = pLimit(Number(process.env.CONCURRENCY || 8));
+  await Promise.all(
+    Array.from(round2Pairs).map((pairKey) =>
+      limit(async () => {
+        const [aId, bId] = pairKey.split(":::");
+        let dateRow = sqlite.prepare("SELECT id, status FROM dates WHERE a_id = ? AND b_id = ? AND round = 2").get(aId, bId) as any;
+        if (!dateRow) {
+          const id = crypto.randomUUID();
+          sqlite.prepare(`
+            INSERT INTO dates (id, a_id, b_id, round, status)
+            VALUES (?, ?, ?, 2, 'pending')
+          `).run(id, aId, bId);
+          dateRow = { id, status: "pending" };
+        }
 
-    if (dateRow.status === "pending") {
-      await executeDate(dateRow.id);
-    }
-  }
+        if (dateRow.status === "pending") {
+          await executeDate(dateRow.id);
+        }
+      })
+    )
+  );
 }

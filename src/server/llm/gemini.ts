@@ -53,7 +53,7 @@ export class GeminiLLM implements LLMInterface {
 
   async text(options: LLMTextOptions): Promise<string> {
     const start = Date.now();
-    const model = options.model || process.env.LLM_MODEL_FAST || "gemini-2.0-flash";
+    const model = options.model || process.env.LLM_MODEL_FAST || "gemini-3.5-flash";
 
     if (!this.client) {
       return this.fallback.text(options);
@@ -90,7 +90,7 @@ export class GeminiLLM implements LLMInterface {
 
   async object<T extends z.ZodTypeAny>(options: LLMObjectOptions<T>): Promise<z.infer<T>> {
     const start = Date.now();
-    const model = options.model || process.env.LLM_MODEL_STRONG || "gemini-2.0-flash";
+    const model = options.model || process.env.LLM_MODEL_STRONG || "gemini-3.5-flash";
 
     if (!this.client) {
       return this.fallback.object(options);

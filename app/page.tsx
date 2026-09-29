@@ -129,6 +129,25 @@ export default function HomePage() {
     }
   };
 
+  const handleRunRealPipeline = async () => {
+    setIsLoading(true);
+    setMessage("Executing End-to-End Real Pipeline (Round 1 Speed Dates, Reflection, Round 2 Dates, Scoring & Rankings)...");
+    try {
+      const res = await fetch("/api/pipeline/reseed-real", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("End-to-end pipeline completed! 25 real figures, 300 Round 1 dates, 121 Round 2 dates, and rankings ready.");
+        fetchStatus();
+      } else {
+        setMessage(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      setMessage(`Error: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -230,9 +249,18 @@ export default function HomePage() {
             </button>
 
             <button
+              onClick={handleRunRealPipeline}
+              disabled={isLoading}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold tracking-wide flex items-center gap-2 transition-all shadow-lg shadow-emerald-950"
+            >
+              <Sparkles className="w-4 h-4 fill-white" />
+              Run Real Pipeline (End-to-End)
+            </button>
+
+            <button
               onClick={handleRunPipeline}
               disabled={isLoading || (pipelineStatus?.peopleCount || 0) < 2}
-              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold tracking-wide flex items-center gap-2 transition-all shadow-lg shadow-rose-600/30"
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold tracking-wide flex items-center gap-2 transition-all shadow-lg shadow-rose-600/30"
             >
               <Play className="w-4 h-4 fill-white" />
               Run Pipeline
