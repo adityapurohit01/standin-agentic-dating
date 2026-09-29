@@ -18,7 +18,8 @@ declare global {
 
 export function getSqlite(): Database.Database {
   if (!global._sqlite) {
-    global._sqlite = new Database(dbPath);
+    global._sqlite = new Database(dbPath, { timeout: 10000 });
+    global._sqlite.pragma("busy_timeout = 10000");
     global._sqlite.pragma("journal_mode = WAL");
     global._sqlite.pragma("foreign_keys = ON");
 

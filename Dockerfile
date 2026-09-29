@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATA_DIR=/data
+ENV DATA_DIR=/tmp/build-data
 RUN npm run build
 
 FROM node:22-alpine AS runner

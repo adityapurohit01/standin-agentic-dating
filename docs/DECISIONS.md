@@ -16,4 +16,5 @@
 - Decision: Initialized Git repository, verified zero secret exposure (.env excluded via .gitignore), and published to public GitHub repository adityapurohit01/standin-agentic-dating, Reason: Fulfills user request to push the codebase to GitHub repository https://github.com/adityapurohit01/standin-agentic-dating with strict security hygiene.
 - Decision: Checkpointed SQLite database (PRAGMA wal_checkpoint(TRUNCATE)) and committed data/app.db alongside data/media/.gitkeep, Reason: Fulfills user request to include data files in the GitHub repository so fresh clones have pre-seeded personas, dates, and evaluation records out of the box.
 - Decision: Removed VOLUME directive from Dockerfile, configured HOSTNAME=0.0.0.0 and PORT=3000, and created public/.gitkeep, Reason: Railway volume management requires external mounts and rejects Dockerfile VOLUME instructions; setting HOSTNAME binds Next.js to container network interfaces.
+- Decision: Added busy_timeout=10000 to better-sqlite3 and configured builder stage DATA_DIR=/tmp/build-data, Reason: Resolves SQLITE_BUSY database lock contention during Next.js parallel page data collection inside Docker.
 
