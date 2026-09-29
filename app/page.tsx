@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Users, Play, Upload, Database, DollarSign, CheckCircle2, AlertCircle, RefreshCw, ArrowRight } from "lucide-react";
+import { Sparkles, Users, Play, Upload, Database, DollarSign, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, UserCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -53,6 +53,29 @@ export default function HomePage() {
         setMessage("Candidate added successfully!");
         setLinkedinUrl("");
         setInstagramUrl("");
+        fetchStatus();
+      } else {
+        setMessage(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      setMessage(`Error: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSeedReal = async () => {
+    setIsLoading(true);
+    setMessage("Loading 25 verified real public figures (Satya Nadella, Sundar Pichai, Sam Altman, etc.)...");
+    try {
+      const res = await fetch("/api/people/seed-real", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replace: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(data.message || "Loaded 25 real public figures!");
         fetchStatus();
       } else {
         setMessage(`Error: ${data.error}`);
@@ -187,14 +210,23 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSeedReal}
+              disabled={isLoading}
+              className="px-4 py-2 rounded-xl bg-blue-950/70 hover:bg-blue-900/70 text-blue-300 text-xs font-bold flex items-center gap-1.5 transition-colors border border-blue-600/50 shadow-md shadow-blue-950"
+            >
+              <UserCheck className="w-4 h-4 text-blue-400" />
+              Load Real People (25)
+            </button>
+
             <button
               onClick={handleSeedDemo}
               disabled={isLoading}
               className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-zinc-700"
             >
               <Database className="w-4 h-4 text-amber-400" />
-              Load Demo Set (25)
+              Load Synthetic Demo (25)
             </button>
 
             <button
